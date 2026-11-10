@@ -19,6 +19,15 @@ It does not install Slurm, MariaDB, InfluxDB or SSSD. The node must already run 
 - Outbound HTTPS from the node to the artifact CDN, the Keycloak realm and vref-api.
 - A Slurm that lets the `vrefagent` user see every user's jobs: no `PrivateData=jobs` in `slurm.conf`, and either none in `slurmdbd.conf` or `vrefagent` as an accounting operator.
 
+## Terms
+
+- **slurmrestd** is Slurm's REST API service. The agents talk to Slurm through it.
+- **Keycloak and OIDC**: Keycloak is the sign-in service Vantage uses, and OIDC is the protocol it speaks. The cluster signs in with a client ID and secret and receives a short-lived token.
+- **JWT signing key**: the key Slurm uses to sign and check the login tokens it hands out.
+- **LDAP** is the user directory of your organization. The reconciler copies its users and groups into Slurm accounts.
+- **Accounting operator**: a Slurm user allowed to see all jobs in the accounting database. `PrivateData=jobs` is the Slurm setting that hides jobs from other users.
+- **OnCalendar** is a systemd schedule expression, such as `daily` or `*-*-* 03:00:00`.
+
 ## Variables
 
 Required (the role fails when one is empty):

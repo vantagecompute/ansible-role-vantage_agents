@@ -5,7 +5,7 @@
   ansible.builtin.assert:
     that:
       - ansible_facts['distribution'] == 'Ubuntu'
-      - ansible_facts['distribution_version'] is version('26.04', '>=')
+      - ansible_facts['distribution_version'] is version('26.04', '==')
       - ansible_facts['architecture'] == 'x86_64'
     fail_msg: >-
       This role supports Ubuntu 26.04 on x86_64 only. This host is

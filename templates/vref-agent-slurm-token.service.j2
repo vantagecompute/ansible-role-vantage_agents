@@ -5,4 +5,4 @@ After=slurmctld.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/vref-agent-slurm-token
+ExecStart={{ vantage_agents_vref_token_script }}

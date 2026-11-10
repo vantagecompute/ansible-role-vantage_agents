@@ -33,7 +33,7 @@
 - name: Install the Slurm token refresh script
   ansible.builtin.template:
     src: vref-agent-slurm-token.sh.j2
-    dest: /usr/local/sbin/vref-agent-slurm-token
+    dest: "{{ vantage_agents_vref_token_script }}"
     owner: root
     group: root
     mode: "0750"
@@ -54,7 +54,7 @@
   ansible.builtin.meta: flush_handlers
 
 - name: Mint the first Slurm token
-  ansible.builtin.command: /usr/local/sbin/vref-agent-slurm-token
+  ansible.builtin.command: "{{ vantage_agents_vref_token_script }}"
   args:
     creates: "{{ vantage_agents_vref_token_file }}"
 

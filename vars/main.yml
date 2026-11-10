@@ -15,3 +15,5 @@ vantage_agents_reconciler_key_copy: "/etc/vantage/slurm-accounts-reconciler/jwt_
 vantage_agents_vref_dir: "/etc/vantage/vref-agent"
 vantage_agents_vref_token_file: "/etc/vantage/vref-agent/slurm.token"
 vantage_agents_vref_slurm_identity: "vrefagent"
+vantage_agents_vref_token_script: "/usr/local/sbin/vref-agent-slurm-token"
+vantage_agents_ldap_base_dn: "dc=vantagecompute,dc=ai"
