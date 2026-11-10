@@ -16,6 +16,26 @@
     shell: /usr/sbin/nologin
     create_home: false
 
+- name: Ask this vref-agent build whether it can install itself
+  ansible.builtin.command: "{{ vantage_agents_binary_staged }} systemd-setup --help"
+  register: vantage_agents_vref_setup_help
+  changed_when: false
+  failed_when: false
+  when: vantage_agents_binary_needs_install | bool
+
+- name: Check that this vref-agent build has systemd-setup
+  ansible.builtin.assert:
+    that: >-
+      'systemd-setup' in (vantage_agents_vref_setup_help.stdout | default('')
+      ~ vantage_agents_vref_setup_help.stderr | default(''))
+    fail_msg: >-
+      The vref-agent build {{ vantage_agents_vref_agent_version }} that the artifact CDN
+      served has no systemd-setup command, so it cannot be installed as a service. It is
+      the older cloud-side agent. Set vantage_agents_vref_agent_version to a release that
+      includes the on-cluster agent.
+    quiet: true
+  when: vantage_agents_binary_needs_install | bool
+
 - name: Install vref-agent as a service
   ansible.builtin.command: "{{ vantage_agents_binary_staged }} systemd-setup --slurm-user {{ vantage_agents_slurm_user }}"
   when: vantage_agents_binary_needs_install | bool

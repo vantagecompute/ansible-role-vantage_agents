@@ -40,6 +40,33 @@
         expected_line: 'VREF_AGENT_CLIENT_SECRET="a \"quoted\" \\ secret"'
       no_log: true
 
+    - name: Read every settings file
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      loop:
+        - /etc/vantage/slurm-accounts-reconciler/env
+        - /etc/vantage/vref-agent/env
+      register: env_files
+      no_log: true
+
+    - name: Check every line of each settings file is a comment or KEY="value"
+      ansible.builtin.assert:
+        that: >-
+          (item.content | b64decode).splitlines()
+          | reject('match', '^(#.*|[A-Z][A-Z0-9_]*=".*")$') | list | length == 0
+        fail_msg: "A line in {{ item.item }} is neither a comment nor KEY=\"value\"."
+      loop: "{{ env_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      no_log: true
+
+    - name: Check the first setting of each file was not swallowed by the comment above it
+      ansible.builtin.assert:
+        that:
+          - (env_files.results[0].content | b64decode).splitlines()[1] is match('^SLURM_ACCOUNTS_RECONCILER_LDAP_URI=')
+          - (env_files.results[1].content | b64decode).splitlines()[1] is match('^VREF_AGENT_API_URL=')
+      no_log: true
+
     - name: Ask systemd about the units
       ansible.builtin.command: "systemctl is-enabled {{ item }}"
       loop:

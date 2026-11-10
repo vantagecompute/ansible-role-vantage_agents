@@ -28,6 +28,7 @@ STUB = """#!/bin/sh
 name={name}
 case "${{1:-}}" in
 systemd-setup)
+  if [ "${{2:-}}" = "--help" ]; then echo "Usage: sudo $name systemd-setup [--now]"; exit 0; fi
   id -u "$name" >/dev/null 2>&1 || useradd --system --user-group --no-create-home --shell /usr/sbin/nologin "$name"
   install -d -m 0750 -o "$name" -g "$name" "/var/lib/$name"
   install -d -m 0755 /etc/vantage
