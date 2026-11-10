@@ -1,0 +1,56 @@
+---
+# Fail early, with a clear message, when the host or the inputs are wrong.
+
+- name: Check the platform
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == 'Ubuntu'
+      - ansible_facts['distribution_version'] is version('26.04', '>=')
+      - ansible_facts['architecture'] == 'x86_64'
+    fail_msg: >-
+      This role supports Ubuntu 26.04 on x86_64 only. This host is
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
+      on {{ ansible_facts['architecture'] }}.
+    quiet: true
+
+- name: Check that the required variables are set
+  ansible.builtin.assert:
+    that: (lookup('ansible.builtin.vars', item) | string | length) > 0
+    fail_msg: "The variable {{ item }} is required and is empty."
+    quiet: true
+  loop:
+    - vantage_agents_client_id
+    - vantage_agents_client_secret
+    - vantage_agents_oidc_base_url
+    - vantage_agents_ldap_url
+    - vantage_agents_ldap_organization_id
+    - vantage_agents_ldap_bind_password
+    - vantage_agents_vref_api_url
+  no_log: true
+
+- name: Check that the Slurm user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ vantage_agents_slurm_user }}"
+  changed_when: false
+
+- name: Look for the files the Vantage image provides
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ vantage_agents_jwt_key_file }}"
+    - /usr/bin/scontrol
+  register: vantage_agents_image_files
+  changed_when: false
+
+- name: Check that the node already runs Slurm
+  ansible.builtin.assert:
+    that: item.stat.exists
+    fail_msg: >-
+      {{ item.item }} is missing. This role installs the Vantage agents on a
+      node that already runs Slurm (for example the Vantage image); it does not
+      install Slurm.
+    quiet: true
+  loop: "{{ vantage_agents_image_files.results }}"
+  loop_control:
+    label: "{{ item.item }}"

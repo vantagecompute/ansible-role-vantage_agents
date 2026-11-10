@@ -1,0 +1,8 @@
+# Managed by Ansible (role vantage_agents).
+[Unit]
+Description=Refresh the Slurm token vref-agent reads with
+After=slurmctld.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/vref-agent-slurm-token

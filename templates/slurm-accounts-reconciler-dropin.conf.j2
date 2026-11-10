@@ -1,0 +1,11 @@
+# Managed by Ansible (role vantage_agents).
+[Unit]
+After=slurmctld.service slurmdbd.service slurmrestd.service
+
+[Service]
+{% if vantage_agents_identity_helper.stat.exists %}
+# The image's helper makes the slurm user an Operator in accounting. It runs as
+# root (the + prefix) and waits for slurmdbd, so allow it time on a first boot.
+ExecStartPre=+{{ vantage_agents_reconciler_identity_helper }}
+TimeoutStartSec=180
+{% endif %}

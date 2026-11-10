@@ -1,0 +1,61 @@
+---
+# Make a bare Ubuntu 26.04 VM look like the Vantage image as far as the role
+# can tell, and start the stub CDN. Test use only.
+- name: Prepare a stand-in for the Vantage image
+  hosts: all
+  become: true
+  tasks:
+    - name: Create the slurm user
+      ansible.builtin.user:
+        name: slurm
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Create the Slurm directory
+      ansible.builtin.file:
+        path: /etc/slurm
+        state: directory
+        mode: "0755"
+
+    - name: Create a Slurm token signing key
+      ansible.builtin.copy:
+        content: "not a real key\n"
+        dest: /etc/slurm/jwt_hs256.key
+        owner: slurm
+        group: slurm
+        mode: "0600"
+
+    - name: Install a scontrol that mints a fake token
+      ansible.builtin.copy:
+        content: |
+          #!/bin/sh
+          echo "SLURM_JWT=fake.token.value"
+        dest: /usr/bin/scontrol
+        mode: "0755"
+
+    - name: Copy the stub CDN
+      ansible.builtin.copy:
+        src: fixtures/stub_cdn.py
+        dest: /usr/local/bin/stub_cdn.py
+        mode: "0755"
+
+    - name: Run the stub CDN as a service
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Stub Vantage artifact CDN
+          [Service]
+          ExecStart=/usr/bin/python3 /usr/local/bin/stub_cdn.py 8099
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/stub-cdn.service
+        mode: "0644"
+
+    - name: Start the stub CDN
+      ansible.builtin.systemd_service:
+        name: stub-cdn
+        enabled: true
+        state: started
+        daemon_reload: true

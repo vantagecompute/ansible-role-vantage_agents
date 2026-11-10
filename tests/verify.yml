@@ -1,0 +1,63 @@
+---
+# Check what the role left on the host. Test use only.
+- name: Verify the vantage_agents result
+  hosts: all
+  become: true
+  tasks:
+    - name: Look at the files that hold secrets or tokens
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      loop:
+        - {path: /etc/vantage/slurm-accounts-reconciler/env, mode: "0600", owner: root}
+        - {path: /etc/vantage/vref-agent/env, mode: "0600", owner: root}
+        - {path: /etc/vantage/slurm-accounts-reconciler/jwt_hs256.key, mode: "0640", owner: root}
+        - {path: /etc/vantage/vref-agent/slurm.token, mode: "0640", owner: root}
+      register: files
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Check their modes and owners
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == item.item.mode
+          - item.stat.pw_name == item.item.owner
+      loop: "{{ files.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+
+    - name: Read the vref-agent settings
+      ansible.builtin.slurp:
+        src: /etc/vantage/vref-agent/env
+      register: vref_env
+      no_log: true
+
+    - name: Check the secret is escaped for systemd
+      ansible.builtin.assert:
+        that: expected_line in (vref_env.content | b64decode)
+      vars:
+        # The test secret is: a "quoted" \ secret
+        expected_line: 'VREF_AGENT_CLIENT_SECRET="a \"quoted\" \\ secret"'
+      no_log: true
+
+    - name: Ask systemd about the units
+      ansible.builtin.command: "systemctl is-enabled {{ item }}"
+      loop:
+        - slurm-accounts-reconciler.service
+        - vref-agent.timer
+        - vref-agent.path
+        - vref-agent-slurm-token.timer
+      register: enabled
+      changed_when: false
+
+    - name: Check the reconciler is running
+      ansible.builtin.command: systemctl is-active slurm-accounts-reconciler.service
+      register: active
+      changed_when: false
+      failed_when: active.stdout != 'active'
+
+    - name: Check the image's reconciler path unit is not enabled
+      ansible.builtin.command: systemctl is-enabled slurm-accounts-reconciler.path
+      register: path_unit
+      changed_when: false
+      failed_when: path_unit.stdout == 'enabled'

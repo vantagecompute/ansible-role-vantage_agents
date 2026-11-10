@@ -1,0 +1,74 @@
+---
+# vref-agent: a timer-driven pass, installed by its own systemd-setup. It reads
+# slurmrestd with a Slurm token for its own user, which this role mints and
+# refreshes on a timer (the agent never mints one itself).
+
+- name: Fetch the vref-agent binary
+  ansible.builtin.include_tasks: fetch_binary.yml
+  vars:
+    vantage_agents_binary_name: vref-agent
+    vantage_agents_binary_version: "{{ vantage_agents_vref_agent_version }}"
+
+- name: Create the Slurm identity vref-agent reads as
+  ansible.builtin.user:
+    name: "{{ vantage_agents_vref_slurm_identity }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Install vref-agent as a service
+  ansible.builtin.command: "{{ vantage_agents_binary_staged }} systemd-setup --slurm-user {{ vantage_agents_slurm_user }}"
+  when: vantage_agents_binary_needs_install | bool
+  changed_when: true
+
+- name: Write the vref-agent settings
+  ansible.builtin.template:
+    src: vref-agent.env.j2
+    dest: "{{ vantage_agents_vref_dir }}/env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Install the Slurm token refresh script
+  ansible.builtin.template:
+    src: vref-agent-slurm-token.sh.j2
+    dest: /usr/local/sbin/vref-agent-slurm-token
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Install the Slurm token refresh service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - vref-agent-slurm-token.service
+    - vref-agent-slurm-token.timer
+  notify: Reload systemd
+
+- name: Flush handlers so the units exist before they are enabled
+  ansible.builtin.meta: flush_handlers
+
+- name: Mint the first Slurm token
+  ansible.builtin.command: /usr/local/sbin/vref-agent-slurm-token
+  args:
+    creates: "{{ vantage_agents_vref_token_file }}"
+
+- name: Enable the Slurm token refresh timer
+  ansible.builtin.systemd_service:
+    name: vref-agent-slurm-token.timer
+    enabled: true
+    state: started
+
+- name: Enable the vref-agent timer and path unit
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - vref-agent.timer
+    - vref-agent.path

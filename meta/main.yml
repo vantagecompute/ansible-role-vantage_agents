@@ -1,46 +1,19 @@
+---
 galaxy_info:
-  author: James Beedy <james@vantagecompute.ai>
-  description: Ansible role that installs the vantage-agent and jobbergate-agent.
-  # This role installs the vantage-agent and jobbergate-agent from pypi, ensuring they are configured
-  # with the necessary OIDC client ID, client secret, and cluster name.
-  # It also ensures that the agents are running and enabled on the system.
+  role_name: vantage_agents
+  namespace: vantagecompute
+  author: Vantage Compute
+  description: >-
+    Installs the Vantage agents on a Slurm node: the slurm-accounts-reconciler
+    and vref-agent.
   company: Vantage Compute
-  license: apache v2.0
-  min_ansible_version: "2.9"
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.16"
   platforms:
-    - name: EL
-      versions:
-        - all
-      architectures:
-        - x86_64
-        - amd64
     - name: Ubuntu
       versions:
-        - jammy
-        - noble # 24.04
-      architectures:
-        - x86_64
-        - amd64
-    - name: Debian
-      versions:
-        - stretch
-        - buster
-        - bullseye
-        - bookworm
-      architectures:
-        - x86_64
-        - amd64
-    - name: Fedora
-      versions:
-        - all
-      architectures:
-        - x86_64
-        - amd64
-    - name: Amazon
-      versions:
-        - all
-      architectures:
-        - x86_64
-        - amd64
-  galaxy_tags: []
+        - resolute # 26.04
+  galaxy_tags:
+    - vantage
+    - slurm
 dependencies: []

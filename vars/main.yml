@@ -1,0 +1,17 @@
+---
+# Internal constants. These are not part of the role's interface.
+vantage_agents_realm_path: "/realms/vantage"
+vantage_agents_token_path: "/protocol/openid-connect/token"
+vantage_agents_arch: "linux-amd64"
+vantage_agents_staging_dir: "/var/cache/vantage-agents"
+
+# Files the Vantage image provides. The role checks for them instead of
+# installing them, and says so when they are missing.
+vantage_agents_jwt_key_file: "/etc/slurm/jwt_hs256.key"
+vantage_agents_reconciler_identity_helper: "/opt/vantage/bin/slurm-accounts-reconciler-identity"
+
+vantage_agents_reconciler_dir: "/etc/vantage/slurm-accounts-reconciler"
+vantage_agents_reconciler_key_copy: "/etc/vantage/slurm-accounts-reconciler/jwt_hs256.key"
+vantage_agents_vref_dir: "/etc/vantage/vref-agent"
+vantage_agents_vref_token_file: "/etc/vantage/vref-agent/slurm.token"
+vantage_agents_vref_slurm_identity: "vrefagent"
