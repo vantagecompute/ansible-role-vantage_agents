@@ -1,6 +1,10 @@
 ---
 # Install the Vantage agents on a node that already runs Slurm.
-# Run it with become: true.
+# Run it with become: true. The presence agent goes last, so Vantage shows the
+# cluster as connected only once everything else is installed.
+#
+# vref-agent and the presence agent carry tags of their own (vref_agent and
+# presence_agent), so a run can leave one out with --skip-tags.
 
 - name: Check the host and the inputs
   ansible.builtin.import_tasks: preflight.yml
@@ -13,3 +17,8 @@
 
 - name: Install vref-agent
   ansible.builtin.import_tasks: vref_agent.yml
+  tags: [vref_agent]
+
+- name: Install the presence agent
+  ansible.builtin.import_tasks: presence_agent.yml
+  tags: [presence_agent]

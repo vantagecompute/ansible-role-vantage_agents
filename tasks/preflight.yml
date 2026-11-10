@@ -26,6 +26,7 @@
     - vantage_agents_ldap_organization_id
     - vantage_agents_ldap_bind_password
     - vantage_agents_vref_api_url
+    - vantage_agents_api_base_url
   no_log: true
 
 - name: Check that the Slurm user exists

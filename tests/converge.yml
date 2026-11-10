@@ -12,5 +12,6 @@
     vantage_agents_ldap_organization_id: org-123
     vantage_agents_ldap_bind_password: bind-password
     vantage_agents_vref_api_url: https://vref.example.test
+    vantage_agents_api_base_url: https://api.example.test
   roles:
     - role: "{{ playbook_dir }}/.."

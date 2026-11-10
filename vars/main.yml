@@ -17,3 +17,5 @@ vantage_agents_vref_token_file: "/etc/vantage/vref-agent/slurm.token"
 vantage_agents_vref_slurm_identity: "vrefagent"
 vantage_agents_vref_token_script: "/usr/local/sbin/vref-agent-slurm-token"
 vantage_agents_ldap_base_dn: "dc=vantagecompute,dc=ai"
+vantage_agents_presence_dir: "/etc/vantage/cluster-presence-agent"
+vantage_agents_presence_interval_seconds: 60

@@ -2,14 +2,15 @@
 
 An Ansible role that installs the Vantage agents on a Slurm node and connects it to a Vantage cluster:
 
+- **cluster-presence-agent** reports once a minute that this cluster is alive, which is what makes it show as Connected in Vantage. It is installed last.
 - **slurm-accounts-reconciler** keeps Slurm users and accounts in step with the LDAP directory of your Vantage organization.
 - **vref-agent** watches job state on the cluster and reports it to vref-api. It runs as a systemd timer (every 10 seconds), makes only outbound calls, and holds no database credential.
 
-The Vantage Compute `v8x` tool applies this role, together with `vantage_tunnel`, when it deploys the Slurm single-node demo. You can apply the same role to your own nodes.
+The Vantage Compute `v8x` tool is meant to apply this role, together with `vantage_tunnel`, when it deploys the Slurm single-node demo. You can apply the same role to your own nodes.
 
 ## What this role does not do
 
-It does not install Slurm, MariaDB, InfluxDB or SSSD. The node must already run Slurm with slurmrestd and a JWT signing key at `/etc/slurm/jwt_hs256.key`, as the Vantage image does. The role checks this first and stops with a clear message when something is missing. It also does not install the presence agent (`cluster-presence-agent`) that makes a cluster show as Connected in Vantage, and it does not install the tunnel or the auth proxy; that is the `vantage_tunnel` role.
+It does not install Slurm, MariaDB, InfluxDB or SSSD. The node must already run Slurm with slurmrestd and a JWT signing key at `/etc/slurm/jwt_hs256.key`, as the Vantage image does. The role checks this first and stops with a clear message when something is missing. It does not install the tunnel or the auth proxy; that is the `vantage_tunnel` role.
 
 ## Requirements
 
@@ -26,6 +27,7 @@ It does not install Slurm, MariaDB, InfluxDB or SSSD. The node must already run 
 - **JWT signing key**: the key Slurm uses to sign and check the login tokens it hands out.
 - **LDAP** is the user directory of your organization. The reconciler copies its users and groups into Slurm accounts.
 - **Accounting operator**: a Slurm user allowed to see all jobs in the accounting database. `PrivateData=jobs` is the Slurm setting that hides jobs from other users.
+- **Presence agent**: a small program that tells Vantage this cluster is alive. A cluster with no presence agent shows as Not Connected.
 - **OnCalendar** is a systemd schedule expression, such as `daily` or `*-*-* 03:00:00`.
 
 ## Variables
@@ -41,6 +43,7 @@ Required (the role fails when one is empty):
 | `vantage_agents_ldap_organization_id` | Your organization ID. |
 | `vantage_agents_ldap_bind_password` | The LDAP bind password. Keep it in `ansible-vault`. |
 | `vantage_agents_vref_api_url` | The base URL of vref-api. |
+| `vantage_agents_api_base_url` | The base URL of the Vantage API the presence agent reports to, for example `https://apis.vantagecompute.ai`. |
 
 Optional:
 
@@ -49,6 +52,7 @@ Optional:
 | `vantage_agents_artifacts_url` | `https://vantage-artifacts.vantagecompute.ai` | Where the binaries are downloaded from. |
 | `vantage_agents_reconciler_version` | `latest` | Reconciler version. Pin it in production. |
 | `vantage_agents_vref_agent_version` | `latest` | vref-agent version. Pin it in production. |
+| `vantage_agents_presence_agent_version` | `latest` | Presence agent version. Pin it in production. |
 | `vantage_agents_slurmrestd_url` | `http://127.0.0.1:6820` | The cluster's slurmrestd. |
 | `vantage_agents_slurm_user` | `slurm` | The user slurmctld runs as. |
 | `vantage_agents_vref_container_engine` | empty | `pyxis` or `apptainer`; leave empty when the cluster runs neither. |
@@ -68,6 +72,7 @@ Optional:
     vantage_agents_ldap_organization_id: "{{ vault_vantage_org_id }}"
     vantage_agents_ldap_bind_password: "{{ vault_vantage_ldap_password }}"
     vantage_agents_vref_api_url: https://vref.example.com
+    vantage_agents_api_base_url: https://apis.vantagecompute.ai
     vantage_agents_reconciler_version: "X.Y.Z"
     vantage_agents_vref_agent_version: "X.Y.Z"
   roles:
@@ -81,6 +86,10 @@ For each binary the role gets a Keycloak token with the cluster's credentials, d
 The checksum comes from the same CDN as the binary, so it catches a damaged download, not a compromised CDN. Tasks that handle secrets use `no_log`.
 
 For vref-agent the role also creates a `vrefagent` system user and mints a Slurm token for it with `scontrol token`, then refreshes it on a systemd timer, because the agent reads that token on every call and never mints one itself. The slurmctld wake-up hook is not wired: that means editing `slurm.conf`, which belongs to whoever owns your Slurm configuration. See the vref agent runbook if you want it.
+
+## Leaving a component out
+
+`vref-agent` and the presence agent carry the Ansible tags `vref_agent` and `presence_agent`. Run with `--skip-tags vref_agent` to leave `vref-agent` out. This matters today: the `vref-agent` build the artifact CDN serves (0.1.3) is the older cloud-side agent and has no `systemd-setup` command, so the role stops with a clear message when it reaches that step. Skip the tag until a release that includes the on-cluster agent is published.
 
 ## Testing
 

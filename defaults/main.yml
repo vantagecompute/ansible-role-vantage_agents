@@ -18,6 +18,10 @@ vantage_agents_ldap_bind_password: ""
 # Required: the base URL of vref-api.
 vantage_agents_vref_api_url: ""
 
+# Required: the base URL of the Vantage API the presence agent reports to,
+# for example https://apis.vantagecompute.ai
+vantage_agents_api_base_url: ""
+
 # Optional: where the binaries come from.
 vantage_agents_artifacts_url: "https://vantage-artifacts.vantagecompute.ai"
 
@@ -26,6 +30,7 @@ vantage_agents_artifacts_url: "https://vantage-artifacts.vantagecompute.ai"
 # binary is reinstalled only when its checksum differs from the installed one.
 vantage_agents_reconciler_version: "latest"
 vantage_agents_vref_agent_version: "latest"
+vantage_agents_presence_agent_version: "latest"
 
 # Optional: how vref-agent reaches Slurm.
 vantage_agents_slurmrestd_url: "http://127.0.0.1:6820"

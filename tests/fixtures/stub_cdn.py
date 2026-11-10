@@ -35,6 +35,7 @@ systemd-setup)
   case "$name" in
     slurm-accounts-reconciler) install -d -m 0750 -o root -g "$name" "/etc/vantage/$name" ;;
     vref-agent) install -d -m 0750 -o root -g "$name" "/etc/vantage/$name" ;;
+    cluster-presence-agent) install -d -m 0700 "/etc/vantage/$name" ;;
     *) install -d -m 0700 "/etc/vantage/$name" ;;
   esac
   install -m 0755 "$0" "/usr/bin/$name"
@@ -66,6 +67,26 @@ WantedBy=multi-user.target
 UNIT
     systemctl daemon-reload
     systemctl enable vref-agent.timer vref-agent.path
+  elif [ "$name" = cluster-presence-agent ]; then
+    cat > /etc/systemd/system/cluster-presence-agent.service <<UNIT
+[Unit]
+Description=stub cluster-presence-agent
+ConditionPathExists=/etc/vantage/cluster-presence-agent/env
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/cluster-presence-agent run
+UNIT
+    cat > /etc/systemd/system/cluster-presence-agent.timer <<UNIT
+[Unit]
+Description=stub cluster-presence-agent timer
+[Timer]
+OnUnitActiveSec=60s
+OnBootSec=30s
+[Install]
+WantedBy=timers.target
+UNIT
+    systemctl daemon-reload
+    systemctl enable cluster-presence-agent.timer
   else
     cat > "/etc/systemd/system/$name.service" <<UNIT
 [Unit]

@@ -4,8 +4,8 @@ galaxy_info:
   namespace: vantagecompute
   author: Vantage Compute
   description: >-
-    Installs the Vantage agents on a Slurm node: the slurm-accounts-reconciler
-    and vref-agent.
+    Installs the Vantage agents on a Slurm node: the slurm-accounts-reconciler,
+    vref-agent and the cluster presence agent.
   company: Vantage Compute
   license: GPL-3.0-or-later
   min_ansible_version: "2.16"
