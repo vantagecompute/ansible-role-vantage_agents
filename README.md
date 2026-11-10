@@ -27,6 +27,9 @@ It does not install Slurm, MariaDB, InfluxDB or SSSD. The node must already run 
 - **JWT signing key**: the key Slurm uses to sign and check the login tokens it hands out.
 - **LDAP** is the user directory of your organization. The reconciler copies its users and groups into Slurm accounts.
 - **Accounting operator**: a Slurm user allowed to see all jobs in the accounting database. `PrivateData=jobs` is the Slurm setting that hides jobs from other users.
+- **systemd timer and path unit**: systemd features that start a service on a schedule (timer) or when a file appears (path unit).
+- **systemd-setup**: a command each Vantage binary has that installs itself as a systemd service (its own user, directories and unit file).
+- **ansible-vault**: Ansible's tool for keeping secrets encrypted in a file. `no_log` is the task setting that keeps a secret out of Ansible's output.
 - **Presence agent**: a small program that tells Vantage this cluster is alive. A cluster with no presence agent shows as Not Connected.
 - **OnCalendar** is a systemd schedule expression, such as `daily` or `*-*-* 03:00:00`.
 
@@ -83,13 +86,15 @@ Optional:
 
 For each binary the role gets a Keycloak token with the cluster's credentials, downloads the binary and its `.sha256` file from the artifact CDN, and checks the checksum. When `/usr/bin` holds a different build it runs the binary's own `systemd-setup` command, which creates the service user, directories and unit. The role then writes the root-only (`0600`) settings files and starts the services. A second run changes nothing. Upgrading means changing the version variable and running again.
 
+The role records what it installed, one line per binary (name, requested version, sha256), in `/etc/vantage/artifacts.lock`, the same file and format `v8x` writes.
+
 The checksum comes from the same CDN as the binary, so it catches a damaged download, not a compromised CDN. Tasks that handle secrets use `no_log`.
 
-For vref-agent the role also creates a `vrefagent` system user and mints a Slurm token for it with `scontrol token`, then refreshes it on a systemd timer, because the agent reads that token on every call and never mints one itself. The slurmctld wake-up hook is not wired: that means editing `slurm.conf`, which belongs to whoever owns your Slurm configuration. See the vref agent runbook if you want it.
+For vref-agent the role also creates a `vrefagent` system user and mints a Slurm token for it with `scontrol token`, then refreshes it on a systemd timer, because the agent reads that token on every call and never mints one itself. The slurmctld wake-up hook is not wired: that means editing `slurm.conf`, which belongs to whoever owns your Slurm configuration. The vref repository's agent runbook (`docusaurus/docs/runbooks/agent-systemd-setup.md`) explains how to wire it.
 
 ## Leaving a component out
 
-`vref-agent` and the presence agent carry the Ansible tags `vref_agent` and `presence_agent`. Run with `--skip-tags vref_agent` to leave `vref-agent` out. This matters today: the `vref-agent` build the artifact CDN serves (0.1.3) is the older cloud-side agent and has no `systemd-setup` command, so the role stops with a clear message when it reaches that step. Skip the tag until a release that includes the on-cluster agent is published.
+`vref-agent` and the presence agent carry the Ansible tags `vref_agent` and `presence_agent`. Run with `--skip-tags vref_agent` to leave `vref-agent` out. This matters today: at the time of writing (2026-11-10) the `vref-agent` build the artifact CDN serves (0.1.3) is the older cloud-side agent and has no `systemd-setup` command, so the role stops with a clear message when it reaches that step. Skip the tag until a release that includes the on-cluster agent is published.
 
 ## Testing
 

@@ -70,6 +70,18 @@
           - (env_files.results[2].content | b64decode).splitlines()[1] is match('^CLUSTER_PRESENCE_AGENT_OIDC_DOMAIN=')
       no_log: true
 
+    - name: Read the lock file
+      ansible.builtin.slurp:
+        src: /etc/vantage/artifacts.lock
+      register: lock_file
+
+    - name: Check it has one line per installed binary, with a sha256
+      ansible.builtin.assert:
+        that:
+          - (lock_file.content | b64decode) is search('(?m)^slurm-accounts-reconciler \\S+ [0-9a-f]{64}$')
+          - (lock_file.content | b64decode) is search('(?m)^vref-agent \\S+ [0-9a-f]{64}$')
+          - (lock_file.content | b64decode) is search('(?m)^cluster-presence-agent \\S+ [0-9a-f]{64}$')
+
     - name: Ask systemd about the units
       ansible.builtin.command: "systemctl is-enabled {{ item }}"
       loop:

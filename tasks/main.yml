@@ -8,9 +8,11 @@
 
 - name: Check the host and the inputs
   ansible.builtin.import_tasks: preflight.yml
+  tags: [always]
 
 - name: Get a token for the artifact CDN
   ansible.builtin.import_tasks: token.yml
+  tags: [always]
 
 - name: Install slurm-accounts-reconciler
   ansible.builtin.import_tasks: reconciler.yml

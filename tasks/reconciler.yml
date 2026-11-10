@@ -13,6 +13,12 @@
   changed_when: true
   notify: Restart slurm-accounts-reconciler
 
+- name: Record the installed build
+  ansible.builtin.include_tasks: record_lock.yml
+  vars:
+    vantage_agents_binary_name: slurm-accounts-reconciler
+    vantage_agents_binary_version: "{{ vantage_agents_reconciler_version }}"
+
 - name: Give the reconciler its own copy of the Slurm token signing key
   ansible.builtin.copy:
     src: "{{ vantage_agents_jwt_key_file }}"
