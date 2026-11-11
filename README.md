@@ -94,7 +94,9 @@ For vref-agent the role also creates a `vrefagent` system user and mints a Slurm
 
 ## Leaving a component out
 
-`vref-agent` and the presence agent carry the Ansible tags `vref_agent` and `presence_agent`. Run with `--skip-tags vref_agent` to leave `vref-agent` out. This matters today: at the time of writing (2026-11-10) the `vref-agent` build the artifact CDN serves (0.1.3) is the older cloud-side agent and has no `systemd-setup` command, so the role stops with a clear message when it reaches that step. Skip the tag until a release that includes the on-cluster agent is published.
+`vref-agent` and the presence agent carry the Ansible tags `vref_agent` and `presence_agent`. Run with `--skip-tags vref_agent` to leave `vref-agent` out.
+
+Releases from 0.1.5 include the on-cluster agent and its `systemd-setup` command. The older 0.1.3 build is the cloud-side agent and has none, so the role stops with a clear message when it reaches that step.
 
 ## Testing
 
