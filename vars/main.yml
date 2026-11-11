@@ -1,0 +1,26 @@
+---
+# Internal constants. These are not part of the role's interface.
+vantage_agents_realm_path: "/realms/vantage"
+vantage_agents_token_path: "/protocol/openid-connect/token"
+vantage_agents_arch: "linux-amd64"
+# One line per installed binary: name, requested version, sha256. Same file and
+# format that v8x writes, so a host shows what is installed and from which build.
+vantage_agents_lock_file: "/etc/vantage/artifacts.lock"
+# The Keycloak realm URL, built once.
+vantage_agents_oidc_issuer: "{{ vantage_agents_oidc_base_url | trim('/') }}{{ vantage_agents_realm_path }}"
+vantage_agents_staging_dir: "/var/cache/vantage-agents"
+
+# Files the Vantage image provides. The role checks for them instead of
+# installing them, and says so when they are missing.
+vantage_agents_jwt_key_file: "/etc/slurm/jwt_hs256.key"
+vantage_agents_reconciler_identity_helper: "/opt/vantage/bin/slurm-accounts-reconciler-identity"
+
+vantage_agents_reconciler_dir: "/etc/vantage/slurm-accounts-reconciler"
+vantage_agents_reconciler_key_copy: "/etc/vantage/slurm-accounts-reconciler/jwt_hs256.key"
+vantage_agents_vref_dir: "/etc/vantage/vref-agent"
+vantage_agents_vref_token_file: "/etc/vantage/vref-agent/slurm.token"
+vantage_agents_vref_slurm_identity: "vrefagent"
+vantage_agents_vref_token_script: "/usr/local/sbin/vref-agent-slurm-token"
+vantage_agents_ldap_base_dn: "dc=vantagecompute,dc=ai"
+vantage_agents_presence_dir: "/etc/vantage/cluster-presence-agent"
+vantage_agents_presence_interval_seconds: 60

@@ -1,0 +1,23 @@
+---
+# Trade the cluster's client credentials for a token the artifact CDN accepts.
+# Nothing here is reported as changed, and nothing is logged: the secret is in
+# the request body.
+
+- name: Get a Keycloak token for the artifact CDN
+  ansible.builtin.uri:
+    url: "{{ vantage_agents_oidc_issuer }}{{ vantage_agents_token_path }}"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: client_credentials
+      client_id: "{{ vantage_agents_client_id }}"
+      client_secret: "{{ vantage_agents_client_secret }}"
+    return_content: true
+  register: vantage_agents_token_response
+  changed_when: false
+  no_log: true
+
+- name: Keep the token for the downloads
+  ansible.builtin.set_fact:
+    vantage_agents_token: "{{ vantage_agents_token_response.json.access_token }}"
+  no_log: true

@@ -1,0 +1,63 @@
+---
+# Download one binary from the artifact CDN and verify it. Takes:
+#   vantage_agents_binary_name     the binary, for example vref-agent
+#   vantage_agents_binary_version  a version or "latest"
+# Sets:
+#   vantage_agents_binary_staged   where the verified binary is
+#   vantage_agents_binary_needs_install  true when /usr/bin holds another build
+#
+# The checksum comes from the CDN with the same token as the binary, so it only
+# guards against a damaged download, not against a compromised CDN.
+
+- name: "Work out the download URL of {{ vantage_agents_binary_name }}"
+  ansible.builtin.set_fact:
+    vantage_agents_binary_url: >-
+      {{ vantage_agents_artifacts_url | trim('/') }}/binaries/{{ vantage_agents_binary_name }}/{{
+      vantage_agents_arch }}/{{ vantage_agents_binary_version }}/{{ vantage_agents_binary_name }}
+
+- name: "Fetch the checksum of {{ vantage_agents_binary_name }}"
+  ansible.builtin.uri:
+    url: "{{ vantage_agents_binary_url }}.sha256"
+    headers:
+      Authorization: "Bearer {{ vantage_agents_token }}"
+    return_content: true
+  register: vantage_agents_checksum_response
+  changed_when: false
+  no_log: true
+
+- name: Keep the expected checksum
+  ansible.builtin.set_fact:
+    vantage_agents_binary_sha256: "{{ (vantage_agents_checksum_response.content | trim).split()[0] }}"
+
+- name: Create the staging directory
+  ansible.builtin.file:
+    path: "{{ vantage_agents_staging_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: "Download {{ vantage_agents_binary_name }}"
+  ansible.builtin.get_url:
+    url: "{{ vantage_agents_binary_url }}"
+    dest: "{{ vantage_agents_staging_dir }}/{{ vantage_agents_binary_name }}"
+    headers:
+      Authorization: "Bearer {{ vantage_agents_token }}"
+    checksum: "sha256:{{ vantage_agents_binary_sha256 }}"
+    owner: root
+    group: root
+    mode: "0755"
+  no_log: true
+
+- name: "Look at the installed {{ vantage_agents_binary_name }}"
+  ansible.builtin.stat:
+    path: "/usr/bin/{{ vantage_agents_binary_name }}"
+    checksum_algorithm: sha256
+  register: vantage_agents_installed_binary
+
+- name: Decide whether to (re)install
+  ansible.builtin.set_fact:
+    vantage_agents_binary_staged: "{{ vantage_agents_staging_dir }}/{{ vantage_agents_binary_name }}"
+    vantage_agents_binary_needs_install: >-
+      {{ not vantage_agents_installed_binary.stat.exists
+         or vantage_agents_installed_binary.stat.checksum != vantage_agents_binary_sha256 }}

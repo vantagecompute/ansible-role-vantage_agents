@@ -1,0 +1,24 @@
+---
+# Record what was installed. Takes:
+#   vantage_agents_binary_name     for example vref-agent
+#   vantage_agents_binary_version  the requested version or "latest"
+# Needs vantage_agents_binary_sha256 from fetch_binary.yml.
+# One line per binary, replaced in place, so a second run changes nothing.
+
+- name: Create the Vantage settings directory
+  ansible.builtin.file:
+    path: "{{ vantage_agents_lock_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: "Record the installed build of {{ vantage_agents_binary_name }}"
+  ansible.builtin.lineinfile:
+    path: "{{ vantage_agents_lock_file }}"
+    regexp: "^{{ vantage_agents_binary_name }} "
+    line: "{{ vantage_agents_binary_name }} {{ vantage_agents_binary_version }} {{ vantage_agents_binary_sha256 }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"

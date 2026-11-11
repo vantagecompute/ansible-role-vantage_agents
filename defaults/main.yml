@@ -1,10 +1,43 @@
 ---
-# defaults/main.yml
-# Default variables for vantage_agents role
+# Inputs for the vantage_agents role. The role refuses to run when a required
+# one is empty (see tasks/preflight.yml).
 
-oidc_client_id: ""
-oidc_client_secret: ""
-cluster_name: ""
+# Required: the cluster's Keycloak client. The client id is the cluster id.
+vantage_agents_client_id: ""
+vantage_agents_client_secret: ""
 
-# Installation type: 'snap' (default) or 'pypi'
-install_type: "snap"
+# Required: the Keycloak base URL, without the /realms/vantage suffix,
+# for example https://auth.vantagecompute.ai
+vantage_agents_oidc_base_url: ""
+
+# Required: the LDAP settings of the cluster's organization.
+vantage_agents_ldap_url: ""
+vantage_agents_ldap_organization_id: ""
+vantage_agents_ldap_bind_password: ""
+
+# Required: the base URL of vref-api.
+vantage_agents_vref_api_url: ""
+
+# Required: the base URL of the Vantage API the presence agent reports to,
+# for example https://apis.vantagecompute.ai
+vantage_agents_api_base_url: ""
+
+# Optional: where the binaries come from.
+vantage_agents_artifacts_url: "https://vantage-artifacts.vantagecompute.ai"
+
+# Optional: pin versions. "latest" can change under you, so pin in production.
+# A pinned or "latest" version is resolved to a checksum on every run, and a
+# binary is reinstalled only when its checksum differs from the installed one.
+vantage_agents_reconciler_version: "latest"
+vantage_agents_vref_agent_version: "latest"
+vantage_agents_presence_agent_version: "latest"
+
+# Optional: how vref-agent reaches Slurm.
+vantage_agents_slurmrestd_url: "http://127.0.0.1:6820"
+vantage_agents_slurm_user: "slurm"
+# "pyxis" or "apptainer"; empty when the cluster runs neither.
+vantage_agents_vref_container_engine: ""
+# The Slurm token for the vrefagent user lives this many seconds and is
+# re-minted on the schedule below (a systemd OnCalendar expression).
+vantage_agents_slurm_token_lifespan: 604800
+vantage_agents_slurm_token_refresh: "daily"

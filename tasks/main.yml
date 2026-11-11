@@ -1,18 +1,26 @@
 ---
-# This file is part of the Ansible role for Vantage Agents.
-# It includes tasks based on the installation type specified in the `install_type` variable.
-# The role supports two installation methods: 'snap' and 'pypi'.
-# The tasks are organized into separate files for each installation type, allowing for modular and maintainable code.
+# Install the Vantage agents on a node that already runs Slurm.
+# Run it with become: true. The presence agent goes last, so Vantage shows the
+# cluster as connected only once everything else is installed.
 #
-# tasks/main.yml
-- name: Set install_type to lower-case
-  ansible.builtin.set_fact:
-    install_type: "{{ install_type | lower }}"
+# vref-agent and the presence agent carry tags of their own (vref_agent and
+# presence_agent), so a run can leave one out with --skip-tags.
 
-- name: Include Snap tasks
-  ansible.builtin.include_tasks: snap_install.yml
-  when: install_type == 'snap'
+- name: Check the host and the inputs
+  ansible.builtin.import_tasks: preflight.yml
+  tags: [always]
 
-- name: Include PyPI tasks
-  ansible.builtin.include_tasks: pypi_install.yml
-  when: install_type == 'pypi'
+- name: Get a token for the artifact CDN
+  ansible.builtin.import_tasks: token.yml
+  tags: [always]
+
+- name: Install slurm-accounts-reconciler
+  ansible.builtin.import_tasks: reconciler.yml
+
+- name: Install vref-agent
+  ansible.builtin.import_tasks: vref_agent.yml
+  tags: [vref_agent]
+
+- name: Install the presence agent
+  ansible.builtin.import_tasks: presence_agent.yml
+  tags: [presence_agent]

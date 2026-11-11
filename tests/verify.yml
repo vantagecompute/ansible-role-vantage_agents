@@ -1,0 +1,106 @@
+---
+# Check what the role left on the host. Test use only.
+- name: Verify the vantage_agents result
+  hosts: all
+  become: true
+  tasks:
+    - name: Look at the files that hold secrets or tokens
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      loop:
+        - {path: /etc/vantage/slurm-accounts-reconciler/env, mode: "0600", owner: root}
+        - {path: /etc/vantage/vref-agent/env, mode: "0600", owner: root}
+        - {path: /etc/vantage/cluster-presence-agent/env, mode: "0600", owner: root}
+        - {path: /etc/vantage/slurm-accounts-reconciler/jwt_hs256.key, mode: "0640", owner: root}
+        - {path: /etc/vantage/vref-agent/slurm.token, mode: "0640", owner: root}
+      register: files
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Check their modes and owners
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == item.item.mode
+          - item.stat.pw_name == item.item.owner
+      loop: "{{ files.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+
+    - name: Read the vref-agent settings
+      ansible.builtin.slurp:
+        src: /etc/vantage/vref-agent/env
+      register: vref_env
+      no_log: true
+
+    - name: Check the secret is escaped for systemd
+      ansible.builtin.assert:
+        that: expected_line in (vref_env.content | b64decode)
+      vars:
+        # The test secret is: a "quoted" \ secret
+        expected_line: 'VREF_AGENT_CLIENT_SECRET="a \"quoted\" \\ secret"'
+      no_log: true
+
+    - name: Read every settings file
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      loop:
+        - /etc/vantage/slurm-accounts-reconciler/env
+        - /etc/vantage/vref-agent/env
+        - /etc/vantage/cluster-presence-agent/env
+      register: env_files
+      no_log: true
+
+    - name: Check every line of each settings file is a comment or KEY="value"
+      ansible.builtin.assert:
+        that: >-
+          (item.content | b64decode).splitlines()
+          | reject('match', '^(#.*|[A-Z][A-Z0-9_]*=".*")$') | list | length == 0
+        fail_msg: "A line in {{ item.item }} is neither a comment nor KEY=\"value\"."
+      loop: "{{ env_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      no_log: true
+
+    - name: Check the first setting of each file was not swallowed by the comment above it
+      ansible.builtin.assert:
+        that:
+          - (env_files.results[0].content | b64decode).splitlines()[1] is match('^SLURM_ACCOUNTS_RECONCILER_LDAP_URI=')
+          - (env_files.results[1].content | b64decode).splitlines()[1] is match('^VREF_AGENT_API_URL=')
+          - (env_files.results[2].content | b64decode).splitlines()[1] is match('^CLUSTER_PRESENCE_AGENT_OIDC_DOMAIN=')
+      no_log: true
+
+    - name: Read the lock file
+      ansible.builtin.slurp:
+        src: /etc/vantage/artifacts.lock
+      register: lock_file
+
+    - name: Check it has one line per installed binary, with a sha256
+      ansible.builtin.assert:
+        that:
+          - (lock_file.content | b64decode) is search('(?m)^slurm-accounts-reconciler \\S+ [0-9a-f]{64}$')
+          - (lock_file.content | b64decode) is search('(?m)^vref-agent \\S+ [0-9a-f]{64}$')
+          - (lock_file.content | b64decode) is search('(?m)^cluster-presence-agent \\S+ [0-9a-f]{64}$')
+
+    - name: Ask systemd about the units
+      ansible.builtin.command: "systemctl is-enabled {{ item }}"
+      loop:
+        - slurm-accounts-reconciler.service
+        - vref-agent.timer
+        - vref-agent.path
+        - vref-agent-slurm-token.timer
+        - cluster-presence-agent.timer
+      register: enabled
+      changed_when: false
+
+    - name: Check the reconciler is running
+      ansible.builtin.command: systemctl is-active slurm-accounts-reconciler.service
+      register: active
+      changed_when: false
+      failed_when: active.stdout != 'active'
+
+    - name: Check the image's reconciler path unit is not enabled
+      ansible.builtin.command: systemctl is-enabled slurm-accounts-reconciler.path
+      register: path_unit
+      changed_when: false
+      failed_when: path_unit.stdout == 'enabled'

@@ -1,0 +1,100 @@
+---
+# vref-agent: a timer-driven pass, installed by its own systemd-setup. It reads
+# slurmrestd with a Slurm token for its own user, which this role mints and
+# refreshes on a timer (the agent never mints one itself).
+
+- name: Fetch the vref-agent binary
+  ansible.builtin.include_tasks: fetch_binary.yml
+  vars:
+    vantage_agents_binary_name: vref-agent
+    vantage_agents_binary_version: "{{ vantage_agents_vref_agent_version }}"
+
+- name: Create the Slurm identity vref-agent reads as
+  ansible.builtin.user:
+    name: "{{ vantage_agents_vref_slurm_identity }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Ask this vref-agent build whether it can install itself
+  ansible.builtin.command: "{{ vantage_agents_binary_staged }} systemd-setup --help"
+  register: vantage_agents_vref_setup_help
+  changed_when: false
+  failed_when: false
+  when: vantage_agents_binary_needs_install | bool
+
+- name: Check that this vref-agent build has systemd-setup
+  ansible.builtin.assert:
+    that: >-
+      'systemd-setup' in (vantage_agents_vref_setup_help.stdout | default('')
+      ~ vantage_agents_vref_setup_help.stderr | default(''))
+    fail_msg: >-
+      The vref-agent build {{ vantage_agents_vref_agent_version }} that the artifact CDN
+      served has no systemd-setup command, so it cannot be installed as a service. It is
+      the older cloud-side agent. Set vantage_agents_vref_agent_version to a release that
+      includes the on-cluster agent.
+    quiet: true
+  when: vantage_agents_binary_needs_install | bool
+
+- name: Install vref-agent as a service
+  ansible.builtin.command: "{{ vantage_agents_binary_staged }} systemd-setup --slurm-user {{ vantage_agents_slurm_user }}"
+  when: vantage_agents_binary_needs_install | bool
+  changed_when: true
+
+- name: Record the installed build
+  ansible.builtin.include_tasks: record_lock.yml
+  vars:
+    vantage_agents_binary_name: vref-agent
+    vantage_agents_binary_version: "{{ vantage_agents_vref_agent_version }}"
+
+- name: Write the vref-agent settings
+  ansible.builtin.template:
+    src: vref-agent.env.j2
+    dest: "{{ vantage_agents_vref_dir }}/env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Install the Slurm token refresh script
+  ansible.builtin.template:
+    src: vref-agent-slurm-token.sh.j2
+    dest: "{{ vantage_agents_vref_token_script }}"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Install the Slurm token refresh service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - vref-agent-slurm-token.service
+    - vref-agent-slurm-token.timer
+  notify: Reload systemd
+
+- name: Flush handlers so the units exist before they are enabled
+  ansible.builtin.meta: flush_handlers
+
+- name: Mint the first Slurm token
+  ansible.builtin.command: "{{ vantage_agents_vref_token_script }}"
+  args:
+    creates: "{{ vantage_agents_vref_token_file }}"
+
+- name: Enable the Slurm token refresh timer
+  ansible.builtin.systemd_service:
+    name: vref-agent-slurm-token.timer
+    enabled: true
+    state: started
+
+- name: Enable the vref-agent timer and path unit
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - vref-agent.timer
+    - vref-agent.path

@@ -1,0 +1,10 @@
+# Managed by Ansible (role vantage_agents).
+[Unit]
+Description=Refresh the Slurm token vref-agent reads with
+
+[Timer]
+OnCalendar={{ vantage_agents_slurm_token_refresh }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

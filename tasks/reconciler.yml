@@ -1,0 +1,87 @@
+---
+# slurm-accounts-reconciler: installed by its own systemd-setup, as v8x does.
+
+- name: Fetch the slurm-accounts-reconciler binary
+  ansible.builtin.include_tasks: fetch_binary.yml
+  vars:
+    vantage_agents_binary_name: slurm-accounts-reconciler
+    vantage_agents_binary_version: "{{ vantage_agents_reconciler_version }}"
+
+- name: Install slurm-accounts-reconciler as a service
+  ansible.builtin.command: "{{ vantage_agents_binary_staged }} systemd-setup"
+  when: vantage_agents_binary_needs_install | bool
+  changed_when: true
+  notify: Restart slurm-accounts-reconciler
+
+- name: Record the installed build
+  ansible.builtin.include_tasks: record_lock.yml
+  vars:
+    vantage_agents_binary_name: slurm-accounts-reconciler
+    vantage_agents_binary_version: "{{ vantage_agents_reconciler_version }}"
+
+- name: Give the reconciler its own copy of the Slurm token signing key
+  ansible.builtin.copy:
+    src: "{{ vantage_agents_jwt_key_file }}"
+    remote_src: true
+    dest: "{{ vantage_agents_reconciler_key_copy }}"
+    owner: root
+    group: slurm-accounts-reconciler
+    mode: "0640"
+  no_log: true
+  notify: Restart slurm-accounts-reconciler
+
+- name: Write the reconciler settings
+  ansible.builtin.template:
+    src: slurm-accounts-reconciler.env.j2
+    dest: "{{ vantage_agents_reconciler_dir }}/env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart slurm-accounts-reconciler
+
+- name: Look for the image's reconciler helper
+  ansible.builtin.stat:
+    path: "{{ vantage_agents_reconciler_identity_helper }}"
+  register: vantage_agents_identity_helper
+
+- name: Create the reconciler unit drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/slurm-accounts-reconciler.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Order the reconciler after the Slurm daemons
+  ansible.builtin.template:
+    src: slurm-accounts-reconciler-dropin.conf.j2
+    dest: /etc/systemd/system/slurm-accounts-reconciler.service.d/10-vantage-agents.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart slurm-accounts-reconciler
+
+- name: Look for the image's reconciler path unit
+  ansible.builtin.stat:
+    path: /usr/lib/systemd/system/slurm-accounts-reconciler.path
+  register: vantage_agents_image_path_unit
+
+- name: Turn off the image's path unit, so the enabled service alone starts the reconciler
+  ansible.builtin.systemd_service:
+    name: slurm-accounts-reconciler.path
+    enabled: false
+    state: stopped
+  when: vantage_agents_image_path_unit.stat.exists
+
+- name: Flush handlers so the reconciler restarts once
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start slurm-accounts-reconciler
+  ansible.builtin.systemd_service:
+    name: slurm-accounts-reconciler
+    enabled: true
+    state: started
+    daemon_reload: true

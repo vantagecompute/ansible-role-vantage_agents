@@ -1,0 +1,16 @@
+#!/bin/sh
+# Managed by Ansible (role vantage_agents).
+# Mint a Slurm token for {{ vantage_agents_vref_slurm_identity }} and replace the
+# file vref-agent re-reads on every call. The file is replaced in one step, so
+# the agent never sees a half-written token.
+set -eu
+umask 027
+tmp=$(mktemp "{{ vantage_agents_vref_dir }}/.slurm.token.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+scontrol token username={{ vantage_agents_vref_slurm_identity }} lifespan={{ vantage_agents_slurm_token_lifespan }} \
+  | sed -n 's/^SLURM_JWT=//p' > "$tmp"
+[ -s "$tmp" ] || { echo "scontrol returned no token" >&2; exit 1; }
+chown root:vref-agent "$tmp"
+chmod 0640 "$tmp"
+mv "$tmp" "{{ vantage_agents_vref_token_file }}"
+trap - EXIT
