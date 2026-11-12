@@ -1,7 +1,7 @@
 ---
 # Download one binary from the artifact CDN and verify it. Takes:
 #   vantage_agents_binary_name     the binary, for example vref-agent
-#   vantage_agents_binary_version  a version or "latest"
+#   vantage_agents_binary_version  a version, a release line (0.1) or "latest"
 # Sets:
 #   vantage_agents_binary_staged   where the verified binary is
 #   vantage_agents_binary_needs_install  true when /usr/bin holds another build
