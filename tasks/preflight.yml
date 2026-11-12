@@ -29,6 +29,14 @@
     - vantage_agents_api_base_url
   no_log: true
 
+- name: Check the release track
+  ansible.builtin.assert:
+    that: vantage_agents_release_track | string is match('^[0-9]+[.][0-9]+$')
+    fail_msg: >-
+      vantage_agents_release_track is "{{ vantage_agents_release_track }}". It must
+      be a release line, MAJOR.MINOR, such as 0.1.
+    quiet: true
+
 - name: Check that the Slurm user exists
   ansible.builtin.getent:
     database: passwd

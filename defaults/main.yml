@@ -25,12 +25,18 @@ vantage_agents_api_base_url: ""
 # Optional: where the binaries come from.
 vantage_agents_artifacts_url: "https://vantage-artifacts.vantagecompute.ai"
 
-# Optional: pin versions. "latest" can change under you, so pin in production.
-# A pinned or "latest" version is resolved to a checksum on every run, and a
-# binary is reinstalled only when its checksum differs from the installed one.
-vantage_agents_reconciler_version: "latest"
-vantage_agents_vref_agent_version: "latest"
-vantage_agents_presence_agent_version: "latest"
+# Optional: the release line the binaries follow, MAJOR.MINOR. Each binary is
+# the newest release on this line, so a 0.2 release never reaches a cluster
+# that follows 0.1.
+vantage_agents_release_track: "0.1"
+
+# Optional: pin one binary to an exact release (or to "latest"). Each defaults
+# to the release track, which moves with every release on the line, so pin in
+# production. The version is resolved to a checksum on every run, and a binary
+# is reinstalled only when its checksum differs from the installed one.
+vantage_agents_reconciler_version: "{{ vantage_agents_release_track }}"
+vantage_agents_vref_agent_version: "{{ vantage_agents_release_track }}"
+vantage_agents_presence_agent_version: "{{ vantage_agents_release_track }}"
 
 # Optional: how vref-agent reaches Slurm.
 vantage_agents_slurmrestd_url: "http://127.0.0.1:6820"
