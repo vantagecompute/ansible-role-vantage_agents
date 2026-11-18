@@ -53,9 +53,10 @@ Optional:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `vantage_agents_artifacts_url` | `https://vantage-artifacts.vantagecompute.ai` | Where the binaries are downloaded from. |
-| `vantage_agents_reconciler_version` | `latest` | Reconciler version. Pin it in production. |
-| `vantage_agents_vref_agent_version` | `latest` | vref-agent version. Pin it in production. |
-| `vantage_agents_presence_agent_version` | `latest` | Presence agent version. Pin it in production. |
+| `vantage_agents_release_track` | `0.1` | The release line, `MAJOR.MINOR`, each binary follows: the newest release on it. A `0.2` release never reaches a cluster on `0.1`. |
+| `vantage_agents_reconciler_version` | the release track | Reconciler version. Pin it in production. |
+| `vantage_agents_vref_agent_version` | the release track | vref-agent version. Pin it in production. |
+| `vantage_agents_presence_agent_version` | the release track | Presence agent version. Pin it in production. |
 | `vantage_agents_slurmrestd_url` | `http://127.0.0.1:6820` | The cluster's slurmrestd. |
 | `vantage_agents_slurm_user` | `slurm` | The user slurmctld runs as. |
 | `vantage_agents_vref_container_engine` | empty | `pyxis` or `apptainer`; leave empty when the cluster runs neither. |

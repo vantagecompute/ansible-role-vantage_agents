@@ -81,6 +81,8 @@
           - (lock_file.content | b64decode) is search('(?m)^slurm-accounts-reconciler \\S+ [0-9a-f]{64}$')
           - (lock_file.content | b64decode) is search('(?m)^vref-agent \\S+ [0-9a-f]{64}$')
           - (lock_file.content | b64decode) is search('(?m)^cluster-presence-agent \\S+ [0-9a-f]{64}$')
+          # converge pins nothing, so every binary follows the default track.
+          - (lock_file.content | b64decode) is search('(?m)^vref-agent 0[.]1 [0-9a-f]{64}$')
 
     - name: Ask systemd about the units
       ansible.builtin.command: "systemctl is-enabled {{ item }}"

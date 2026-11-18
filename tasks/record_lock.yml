@@ -1,7 +1,7 @@
 ---
 # Record what was installed. Takes:
 #   vantage_agents_binary_name     for example vref-agent
-#   vantage_agents_binary_version  the requested version or "latest"
+#   vantage_agents_binary_version  the requested version, release line or "latest"
 # Needs vantage_agents_binary_sha256 from fetch_binary.yml.
 # One line per binary, replaced in place, so a second run changes nothing.
 
