@@ -18,6 +18,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Lint the role
+        # ansible-core 2.22 warns about its own deprecated callbacks when
+        # ansible-lint lists plugins. That is not about this role.
+        env:
+          ANSIBLE_DEPRECATION_WARNINGS: "False"
         run: pipx run ansible-lint
       - name: Check the test playbooks parse
         run: pipx run --spec ansible-core ansible-playbook --syntax-check -i localhost, tests/converge.yml
