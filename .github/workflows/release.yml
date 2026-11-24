@@ -24,6 +24,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Lint the role
         run: pipx run ansible-lint
+      # Galaxy answers an import into a namespace it does not have with a bare
+      # HTTP 500. Galaxy creates a namespace for a user's own GitHub login only;
+      # one named after an organization has to be requested from the Galaxy
+      # admins, who also add its owners.
+      - name: Check the Galaxy namespace exists
+        run: |
+          count="$(curl -fsS --retry 3 'https://galaxy.ansible.com/api/v1/namespaces/?name=vantagecompute' | jq -r '.count')"
+          if [ "$count" = "0" ]; then
+              echo "::error::Ansible Galaxy has no vantagecompute namespace, so the import would fail with HTTP 500. Request the namespace from the Galaxy admins, with the owner of GALAXY_API_KEY as an owner, then re-run this job."
+              exit 1
+          fi
       - name: Import the role into Ansible Galaxy
         env:
           GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
