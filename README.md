@@ -6,7 +6,17 @@ An Ansible role that installs the Vantage agents on a Slurm node and connects it
 - **slurm-accounts-reconciler** keeps Slurm users and accounts in step with the LDAP directory of your Vantage organization.
 - **vref-agent** watches job state on the cluster and reports it to vref-api. It runs as a systemd timer (every 10 seconds), makes only outbound calls, and holds no database credential.
 
-The Vantage Compute `v8x` tool is meant to apply this role, together with `vantage_tunnel`, when it deploys the Slurm single-node demo. You can apply the same role to your own nodes.
+The Vantage Compute `v8x` tool applies this role, together with `vantage_tunnel`, when it deploys the `slurm-single-qemu` application. You can apply the same role to your own nodes.
+
+## Install
+
+```bash
+ansible-galaxy role install vantagecompute.vantage_agents
+```
+
+Pin an exact version in production: `ansible-galaxy role install vantagecompute.vantage_agents,X.Y.Z`. A version is a git tag of this repository.
+
+Full documentation is at https://docs.vantagecompute.ai/developer/ansible-vantage-agents/ and its source is in `docusaurus/`.
 
 ## What this role does not do
 
@@ -45,7 +55,7 @@ Required (the role fails when one is empty):
 | `vantage_agents_ldap_url` | LDAP URL of your organization. |
 | `vantage_agents_ldap_organization_id` | Your organization ID. |
 | `vantage_agents_ldap_bind_password` | The LDAP bind password. Keep it in `ansible-vault`. |
-| `vantage_agents_vref_api_url` | The base URL of vref-api. |
+| `vantage_agents_vref_api_url` | The base URL of vref-api, with no `/vref` path, for example `https://apis.vantagecompute.ai`. vref-agent adds `/vref` to every route itself. |
 | `vantage_agents_api_base_url` | The base URL of the Vantage API the presence agent reports to, for example `https://apis.vantagecompute.ai`. |
 
 Optional:
@@ -74,12 +84,12 @@ Optional:
     vantage_agents_ldap_url: ldaps://ldap.vantagecompute.ai
     vantage_agents_ldap_organization_id: "{{ vault_vantage_org_id }}"
     vantage_agents_ldap_bind_password: "{{ vault_vantage_ldap_password }}"
-    vantage_agents_vref_api_url: https://vref.example.com
+    vantage_agents_vref_api_url: https://apis.vantagecompute.ai
     vantage_agents_api_base_url: https://apis.vantagecompute.ai
     vantage_agents_reconciler_version: "X.Y.Z"
     vantage_agents_vref_agent_version: "X.Y.Z"
   roles:
-    - vantage_agents
+    - vantagecompute.vantage_agents
 ```
 
 ## How it works
@@ -98,7 +108,9 @@ For vref-agent the role also creates a `vrefagent` system user and mints a Slurm
 
 Releases from 0.1.5 include the on-cluster agent and its `systemd-setup` command. The older 0.1.3 build is the cloud-side agent and has none, so the role stops with a clear message when it reaches that step.
 
-## Testing
+## Testing and releasing
+
+`just release X.Y.Z` tags a release from an up-to-date `main` and pushes the tag; CI then publishes that version to Ansible Galaxy and deploys the documentation.
 
 `just lint` runs ansible-lint. `just test <inventory>` runs the role twice against a throwaway Ubuntu 26.04 host that you point it at, with a stub token endpoint and artifact server, and checks that the second run changes nothing. It proves the Ansible logic only. It does not prove the real binaries, the real `systemd-setup`, or that a cluster shows up in Vantage; for that, apply the role to a host from the Vantage image with a real cluster.
 
