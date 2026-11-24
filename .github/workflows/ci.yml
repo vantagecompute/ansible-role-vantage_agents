@@ -22,6 +22,27 @@ jobs:
       - name: Check the test playbooks parse
         run: pipx run --spec ansible-core ansible-playbook --syntax-check -i localhost, tests/converge.yml
 
+  docs:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Setup node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          package-manager-cache: false
+      - name: Set up Yarn (pinned by packageManager, checksum-verified)
+        uses: ./.github/actions/setup-yarn
+      - name: Install docs dependencies
+        working-directory: docusaurus
+        run: yarn install --immutable
+      - name: Build docs
+        working-directory: docusaurus
+        run: yarn build
+
   commitlint:
     runs-on: ubuntu-26.04
     steps:
