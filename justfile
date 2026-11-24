@@ -3,9 +3,12 @@
 default:
     @just --list
 
-# Lint the role.
+# Lint the role. ansible-lint lists every plugin through ansible-doc, and
+# ansible-core 2.22 answers with deprecation warnings for its own oneline and
+# tree callbacks. They say nothing about this role, so they are silenced here;
+# ansible-lint's own deprecation rules still run.
 lint:
-    uvx ansible-lint
+    ANSIBLE_DEPRECATION_WARNINGS=False uvx ansible-lint
 
 # Check the playbooks parse.
 syntax:
@@ -81,7 +84,7 @@ release version:
     fi
 
     echo "Linting the role before tagging..."
-    uvx ansible-lint
+    just lint
 
     git tag -a "${VERSION}" -m "Release ${VERSION}"
     git push origin "${VERSION}"
