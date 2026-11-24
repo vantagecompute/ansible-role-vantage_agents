@@ -45,8 +45,7 @@ jobs:
 
   commitlint:
     # Dependabot writes its own subjects ("Bump x from a to b"), which the
-    # subject-case rule rejects and which nobody can reword. Its pull requests
-    # are squash-merged under a title a reviewer controls.
+    # subject-case rule rejects and which nobody can reword.
     if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-26.04
     steps:
