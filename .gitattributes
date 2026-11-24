@@ -1,0 +1,10 @@
+# ansible-galaxy installs a role from the repository's archive. These paths are
+# not part of the role, so they are left out of it.
+/docusaurus export-ignore
+/.github export-ignore
+/tests export-ignore
+/justfile export-ignore
+/.commitlintrc.yml export-ignore
+/.ansible-lint export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore

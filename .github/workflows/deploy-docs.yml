@@ -1,0 +1,100 @@
+# Deploy the vantage_agents docs as a spoke site under /developer/ansible-vantage-agents/ on
+# docs.vantagecompute.ai (S3 + CloudFront).
+#
+# Auth is handled at the edge by the Lambda@Edge Keycloak gateway on all of
+# /developer/*; no per-spoke auth config is needed.
+#
+# Required repo variables:
+#   DOCS_BUCKET               S3 bucket name (shared with vantage-docs)
+#   DOCS_CF_DISTRIBUTION_ID   CloudFront distribution ID
+#   DOCS_SPOKE_ROLE_ARN       IAM role scoped to developer/ansible-vantage-agents/*
+
+name: Deploy docs (spoke)
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+# Each job grants its own permissions: only deploy can mint the AWS role.
+permissions: {}
+
+concurrency:
+  group: docs-spoke
+  cancel-in-progress: false
+
+# The build runs third-party code (yarn install), so it has no AWS access.
+# Only deploy, which runs no installed code, mints the OIDC role.
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      # The full history, because the site shows the version from the nearest tag.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          package-manager-cache: false
+
+      - name: Set up Yarn (pinned by packageManager, checksum-verified)
+        uses: ./.github/actions/setup-yarn
+
+      - name: Install docs dependencies
+        working-directory: docusaurus
+        run: yarn install --immutable
+
+      # Lockfile-exact on purpose: this build's output is what gets published, so
+      # it uses only the dependency versions a reviewed commit pinned.
+      - name: Build docs
+        working-directory: docusaurus
+        run: yarn build
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: docs-site
+          path: docusaurus/build/
+          retention-days: 1
+          if-no-files-found: error
+
+  deploy:
+    # Docs publish only from a release tag. workflow_dispatch can be started
+    # from any branch, and this job assumes the spoke role and syncs the live
+    # site with --delete, so a branch must never reach it.
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: docs-site
+          path: docusaurus/build/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.DOCS_SPOKE_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync docusaurus/build/ "s3://${{ vars.DOCS_BUCKET }}/developer/ansible-vantage-agents/" --delete
+
+      - name: Invalidate CloudFront
+        env:
+          DOCS_CF_DISTRIBUTION_ID: ${{ vars.DOCS_CF_DISTRIBUTION_ID }}
+        run: |
+          if [ -z "${DOCS_CF_DISTRIBUTION_ID}" ]; then
+            echo "DOCS_CF_DISTRIBUTION_ID is not set; skipping CloudFront invalidation."
+            exit 0
+          fi
+          aws cloudfront create-invalidation \
+            --distribution-id "${DOCS_CF_DISTRIBUTION_ID}" \
+            --paths "/developer/ansible-vantage-agents/*"
