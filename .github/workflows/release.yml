@@ -1,0 +1,38 @@
+name: Release
+# Pushing a version tag such as 0.1.0 publishes that version of the role to
+# Ansible Galaxy as vantagecompute.vantage_agents. Galaxy reads the role from this
+# repository, so the repository must be public, and it lists one version per
+# tag. GALAXY_API_KEY is an API token of a Galaxy user who owns the
+# vantagecompute namespace.
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  galaxy:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Lint the role
+        run: pipx run ansible-lint
+      - name: Import the role into Ansible Galaxy
+        env:
+          GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
+        run: |
+          if [ -z "$GALAXY_API_KEY" ]; then
+              echo "::error::The GALAXY_API_KEY secret is not set."
+              exit 1
+          fi
+          pipx run --spec ansible-core ansible-galaxy role import \
+              --token "$GALAXY_API_KEY" \
+              --role-name vantage_agents \
+              vantagecompute ansible-role-vantage_agents
